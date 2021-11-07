@@ -131,8 +131,10 @@ def run_model_web(f, cloth_name, cloth_f=None):
     path2 = '/content/Virtual-Try-On-Flask/'+temp_h_name
     if 'jpg' not in temp_o_name and 'jpeg' not in temp_o_name:
         path1 = path1 + '.jpeg'
+        temp_o_name += '.jpeg'
     if 'jpg' not in temp_h_name and 'jpeg' not in temp_h_name:
         path2 = path2 + '.jpeg'
+        temp_h_name += '.jpeg'
     cv2.imwrite(path1, out)
     cv2.imwrite(path2, human_img)
     return temp_o_name, temp_h_name
