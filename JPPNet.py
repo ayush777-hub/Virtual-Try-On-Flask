@@ -21,7 +21,7 @@ class JPP(object):
         options = tf.GPUOptions(allow_growth=True)
         sess = tf.Session(config=tf.ConfigProto(gpu_options=options)) 
         self.sess = tf.Session()
-        with gfile.FastGFile(pb_path, 'rb') as f:
+        with tf.gfile.GFile(pb_path, 'rb') as f:
             graph_def = tf.GraphDef()
             graph_def.ParseFromString(f.read())
             self.sess.graph.as_default()

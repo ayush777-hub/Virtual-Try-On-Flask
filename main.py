@@ -17,7 +17,8 @@ from io import StringIO, BytesIO
 import base64
 from datetime import datetime
 import json
-
+from flask_ngrok import run_with_ngrok
+import matplotlib.image as mpimg
 # Use base64 to send & receive images between clients and the server
 def readb64(base64_string):
     sbuf = BytesIO()
@@ -40,9 +41,14 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 model = Model("checkpoints/jpp.pb",
               "checkpoints/gmm.pth",
               "checkpoints/tom.pth",
-              use_cuda=True)
+              use_cuda=False)
 
 app = Flask(__name__)
+run_with_ngrok(app)
+
+@app.route("/")
+def hello():
+	return "Hello Bro!! Welcome to virtual Tryon"
 
 # UPLOAD_FOLDER = 'request_upload'
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -52,7 +58,7 @@ cloth_list_raw = os.listdir(os.path.join(BASE_DIR, "static", "img"))
 cloth_list = []
 counter = 0
 for cloth in cloth_list_raw:
-    if 'jpg' in cloth:
+    if 'jpeg' or 'jpg' in cloth:
         cloth_list.append([os.path.join("static", "img", cloth), counter])
         counter += 1
 
@@ -80,7 +86,7 @@ def upload_image():
 
         start_time = time.time()
         o_name, h_name = run_model_web(
-            person_image, cloth_list[index][0].split("\\")[-1], cloth_image)
+            person_image, cloth_list[index][0].split("/")[-1], cloth_image)
         end_time = time.time()
         if o_name is None: # bad cloth image
             return 'I told you only clothes image with shape 256*192*3'
@@ -90,38 +96,38 @@ def upload_image():
 
 def run_model_web(f, cloth_name, cloth_f=None):
     '''
-    为web服务进行预测。cloth_name和cloth_f中必有一个有内容，优先选择cloth_f，即用户上传的衣服图片
     prediction service. cloth_name and cloth_f cannot be both None. cloth_f is prior, which is from user upload.
     '''
     if cloth_f is None:
         print(f, cloth_name)
-        c_img = np.array(Image.open(cloth_name))
+        c_img = mpimg.imread(cloth_name)
     else:
         print(f, cloth_f)
         try:
-            c_img = np.array(Image.open(cloth_f))
+            c_img = mpimg.imread(cloth_f)
         except:
-            c_img = np.array(Image.open(cloth_name))
+            c_img = mpimg.imread(cloth_name)
 
-    # 固化到本地的缓存文件夹，访问的时候作为静态资源被调用
     # local resource temp file would be used as static resource.
-    temp_o_name = os.path.join("static", "result", "%d_%s" % (
-        int(time.time()), cloth_name.split("/")[-1]))
-    temp_h_name = os.path.join("static", "human", "%d_%s" % (
-        int(time.time()), cloth_name.split("/")[-1]))
+    print(c_img.shape)
+    temp_o_name = os.path.join("static","result","%d_%s" % (int(time.time()), cloth_name.split("/")[-1]))
+    temp_h_name = os.path.join("static","human","%d_%s" % (int(time.time()), cloth_name.split("/")[-1]))
 
     if c_img.shape[0] != 256 or c_img.shape[1] != 192 or c_img.shape[2] != 3:
         return None, None
 
-    img = Image.open(f)
-    human_img = np.array(img)
-
+    img = mpimg.imread(f)
+    human_img = img
+    human_img = cv2.cvtColor(human_img,cv2.COLOR_RGB2BGR)
+    c_img = cv2.cvtColor(c_img,cv2.COLOR_RGB2BGR)
+    print(f"image shape:{human_img.shape}\n\n\n")
     out, v = model.predict(human_img, c_img, need_bright=False, keep_back=True)
     print("v:"+str(v))
-    out = np.array(out, dtype='uint8')
-
-    img.save(temp_h_name)
-    Image.fromarray(out).save(temp_o_name, quality=95)  # 注意这个95
+    out = np.array(out,dtype=np.float32)
+    path1 = '/content/Virtual-Try-On-Flask/'+temp_o_name
+    path2 = '/content/Virtual-Try-On-Flask/'+temp_h_name
+    cv2.imwrite(path1, out)
+    cv2.imwrite(path2, human_img)
     return temp_o_name, temp_h_name
 
 
