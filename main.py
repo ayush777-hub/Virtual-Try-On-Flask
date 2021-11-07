@@ -46,9 +46,6 @@ model = Model("checkpoints/jpp.pb",
 app = Flask(__name__)
 run_with_ngrok(app)
 
-@app.route("/")
-def hello():
-	return "Hello Bro!! Welcome to virtual Tryon"
 
 # UPLOAD_FOLDER = 'request_upload'
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -63,8 +60,7 @@ for cloth in cloth_list_raw:
         counter += 1
 
 
-# Use "/web" url to get web page
-@app.route('/web')
+@app.route('/')
 def hello_world():
     return render_template('login.html', img_list=cloth_list)
 
@@ -100,16 +96,21 @@ def run_model_web(f, cloth_name, cloth_f=None):
     '''
     if cloth_f is None:
         print(f, cloth_name)
-        c_img = mpimg.imread(cloth_name)
+        c_img = mpimg.imread('/content/Virtual-Try-On-Flask/static/img/'+cloth_name)
     else:
         print(f, cloth_f)
         try:
             c_img = mpimg.imread(cloth_f)
         except:
-            c_img = mpimg.imread(cloth_name)
+            c_img = mpimg.imread('/content/Virtual-Try-On-Flask/static/img/'+cloth_name)
 
     # local resource temp file would be used as static resource.
     print(c_img.shape)
+    if len(c_img.shape)!=3:
+      return "THE IMAGE IS NOT SUPPORTED!!!"
+    if c_img.shape[2]!=3:
+      return "THE IMAGE IS NOT SUPPORTED!!!"
+    c_img = cv2.resize(c_img,(192,256))
     temp_o_name = os.path.join("static","result","%d_%s" % (int(time.time()), cloth_name.split("/")[-1]))
     temp_h_name = os.path.join("static","human","%d_%s" % (int(time.time()), cloth_name.split("/")[-1]))
 
@@ -124,6 +125,7 @@ def run_model_web(f, cloth_name, cloth_f=None):
     out, v = model.predict(human_img, c_img, need_bright=False, keep_back=True)
     print("v:"+str(v))
     out = np.array(out,dtype=np.float32)
+
     path1 = '/content/Virtual-Try-On-Flask/'+temp_o_name
     path2 = '/content/Virtual-Try-On-Flask/'+temp_h_name
     cv2.imwrite(path1, out)
