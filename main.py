@@ -118,6 +118,7 @@ def run_model_web(f, cloth_name, cloth_f=None):
         return None, None
 
     img = mpimg.imread(f)
+    img = cv2.resize(img,(192,256))
     human_img = img
     human_img = cv2.cvtColor(human_img,cv2.COLOR_RGB2BGR)
     c_img = cv2.cvtColor(c_img,cv2.COLOR_RGB2BGR)
